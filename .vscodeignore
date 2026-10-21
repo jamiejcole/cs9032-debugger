@@ -1,0 +1,15 @@
+src/**
+test/**
+scripts/**
+reference/**
+docs/proposals/**
+**/*.map
+**/*.ts
+tsconfig.json
+AVR_DEBUGGER_PROMPT.md
+.gitignore
+node_modules/@types/**
+node_modules/typescript/**
+node_modules/vitest/**
+out/test/**
+out/scripts/**

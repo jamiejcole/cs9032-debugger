@@ -1,0 +1,203 @@
+{
+  "name": "avr-asm-debugger",
+  "displayName": "AVR Assembly Debugger (ATmega2560)",
+  "description": "Simulator and debugger for avra assembly on the ATmega2560",
+  "version": "0.0.1",
+  "publisher": "jamiecole",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./out/src/extension.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "lint": "tsc -p . --noEmit",
+    "test": "vitest run",
+    "package": "npm run build && vsce package"
+  },
+  "dependencies": {
+    "@vscode/debugadapter": "^1.68.0",
+    "@vscode/debugprotocol": "^1.68.0",
+    "avr8js": "^0.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/vscode": "^1.90.0",
+    "@vscode/debugadapter-testsupport": "^1.68.0",
+    "@vscode/vsce": "^4.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "activationEvents": [
+    "onDebug",
+    "onLanguage:avr-asm"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "avr-asm",
+        "aliases": [
+          "AVR Assembly"
+        ],
+        "extensions": [
+          ".asm",
+          ".inc"
+        ],
+        "configuration": "./media/language-configuration.json"
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "avr-asm"
+      },
+      {
+        "language": "asm"
+      },
+      {
+        "language": "assembly"
+      },
+      {
+        "language": "avr"
+      },
+      {
+        "language": "asm-collection"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "avr",
+        "label": "AVR (ATmega2560 simulator)",
+        "languages": [
+          "avr-asm",
+          "asm",
+          "assembly"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "The .asm file to assemble and debug.",
+                "default": "${file}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "default": true,
+                "description": "Stop at the first instruction."
+              },
+              "realtime": {
+                "type": "boolean",
+                "description": "Throttle to 16 MHz wall-clock time (otherwise run at max speed). Defaults to the avr.realtime setting."
+              },
+              "board": {
+                "type": "object",
+                "description": "Lab board wiring (overrides .vscode/avr-board.json). See docs/BOARD.md."
+              },
+              "avra": {
+                "type": "string",
+                "description": "Path to avra."
+              },
+              "includeDirs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "avra include directories."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "avr",
+            "request": "launch",
+            "name": "Debug AVR",
+            "program": "${file}",
+            "stopOnEntry": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "AVR: Debug current .asm",
+            "body": {
+              "type": "avr",
+              "request": "launch",
+              "name": "Debug AVR",
+              "program": "^\"\\${file}\"",
+              "stopOnEntry": true
+            }
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "avr.flash",
+        "title": "Flash to Board",
+        "category": "AVR"
+      },
+      {
+        "command": "avr.showPanel",
+        "title": "Show Board & I/O",
+        "category": "AVR"
+      },
+      {
+        "command": "avr.toggleRealtime",
+        "title": "Toggle Real-time / Max Speed",
+        "category": "AVR"
+      },
+      {
+        "command": "avr.resetStopwatch",
+        "title": "Reset Stopwatch",
+        "category": "AVR"
+      }
+    ],
+    "menus": {
+      "debug/toolBar": [
+        {
+          "command": "avr.toggleRealtime",
+          "when": "debugType == avr"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "avr.flash",
+          "when": "resourceExtname == .asm"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AVR",
+      "properties": {
+        "avr.avraPath": {
+          "type": "string",
+          "default": "/opt/homebrew/bin/avra"
+        },
+        "avr.avrdudePath": {
+          "type": "string",
+          "default": "/opt/homebrew/bin/avrdude"
+        },
+        "avr.includeDir": {
+          "type": "string",
+          "default": "/opt/homebrew/share/avra"
+        },
+        "avr.realtime": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run at real 16 MHz speed so delays and LED flashing look right. Off = max speed."
+        }
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://example.invalid/local-only"
+  }
+}

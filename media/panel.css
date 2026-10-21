@@ -1,0 +1,42 @@
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  padding: 8px 12px;
+}
+#status { opacity: 0.8; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+#board { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.card {
+  border: 1px solid var(--vscode-panel-border, #8884);
+  border-radius: 4px; padding: 8px 12px;
+}
+h2 { font-size: 1em; margin: 0 0 6px; }
+.ledbar { display: flex; flex-direction: column; gap: 3px; }
+.led {
+  width: 44px; height: 12px; border-radius: 2px;
+  background: #3a1010; border: 1px solid #0006;
+  font-size: 9px; line-height: 12px; text-align: right; padding-right: 3px; color: #fff8;
+}
+.led.on { background: #ff3b30; box-shadow: 0 0 6px #ff3b30; color: #fff; }
+.btnrow { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.push {
+  min-width: 56px; padding: 6px 10px; border-radius: 4px; cursor: pointer;
+  background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+.push.down { background: var(--vscode-button-background); color: var(--vscode-button-foreground); transform: translateY(1px); }
+details { margin: 2px 0; }
+summary { cursor: pointer; font-weight: 600; padding: 2px 0; }
+table.regs { border-collapse: collapse; margin: 2px 0 6px 12px; font-family: var(--vscode-editor-font-family); }
+table.regs th { text-align: left; font-weight: normal; padding-right: 8px; min-width: 64px; }
+table.regs td.val { padding-right: 8px; opacity: 0.8; }
+.bit {
+  width: 22px; height: 20px; padding: 0; margin: 0 1px; cursor: pointer;
+  font-family: inherit; border-radius: 2px;
+  background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, #8884);
+}
+.bit.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.bit.driven { outline: 2px solid var(--vscode-charts-orange, orange); outline-offset: -2px; }
+:focus-visible { outline: 2px solid var(--vscode-focusBorder); }

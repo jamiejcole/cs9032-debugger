@@ -1,0 +1,115 @@
+// Opcode table for the AVRe+ core (ATmega2560). AVR Instruction Set Manual, "Instruction Set Summary".
+// Used to reject opcodes the 2560 doesn't have (avr8js silently NOPs them) and for disassembly names.
+
+export interface OpInfo {
+  name: string;
+  words: 1 | 2;
+}
+
+// [mask, match, name, words]. Order matters only where encodings overlap (more specific first).
+const TABLE: [number, number, string, 1 | 2][] = [
+  [0xffff, 0x0000, 'NOP', 1],
+  [0xffff, 0x9598, 'BREAK', 1],
+  [0xffff, 0x9519, 'EICALL', 1],
+  [0xffff, 0x9419, 'EIJMP', 1],
+  [0xffff, 0x95d8, 'ELPM', 1],
+  [0xffff, 0x9509, 'ICALL', 1],
+  [0xffff, 0x9409, 'IJMP', 1],
+  [0xffff, 0x95c8, 'LPM', 1],
+  [0xffff, 0x9508, 'RET', 1],
+  [0xffff, 0x9518, 'RETI', 1],
+  [0xffff, 0x9588, 'SLEEP', 1],
+  [0xffff, 0x95e8, 'SPM', 1],
+  [0xffff, 0x95a8, 'WDR', 1],
+  [0xff8f, 0x9488, 'BCLR', 1],
+  [0xff8f, 0x9408, 'BSET', 1],
+  [0xfe0e, 0x940e, 'CALL', 2],
+  [0xfe0e, 0x940c, 'JMP', 2],
+  [0xfe0f, 0x9000, 'LDS', 2],
+  [0xfe0f, 0x9200, 'STS', 2],
+  [0xfe0f, 0x9405, 'ASR', 1],
+  [0xfe0f, 0x9400, 'COM', 1],
+  [0xfe0f, 0x940a, 'DEC', 1],
+  [0xfe0f, 0x9403, 'INC', 1],
+  [0xfe0f, 0x9406, 'LSR', 1],
+  [0xfe0f, 0x9401, 'NEG', 1],
+  [0xfe0f, 0x9407, 'ROR', 1],
+  [0xfe0f, 0x9402, 'SWAP', 1],
+  [0xfe0f, 0x900f, 'POP', 1],
+  [0xfe0f, 0x920f, 'PUSH', 1],
+  [0xfe0f, 0x9006, 'ELPM', 1],
+  [0xfe0f, 0x9007, 'ELPM', 1],
+  [0xfe0f, 0x9004, 'LPM', 1],
+  [0xfe0f, 0x9005, 'LPM', 1],
+  [0xfe0f, 0x900c, 'LD', 1],
+  [0xfe0f, 0x900d, 'LD', 1],
+  [0xfe0f, 0x900e, 'LD', 1],
+  [0xfe0f, 0x9009, 'LD', 1],
+  [0xfe0f, 0x900a, 'LD', 1],
+  [0xfe0f, 0x9001, 'LD', 1],
+  [0xfe0f, 0x9002, 'LD', 1],
+  [0xfe0f, 0x920c, 'ST', 1],
+  [0xfe0f, 0x920d, 'ST', 1],
+  [0xfe0f, 0x920e, 'ST', 1],
+  [0xfe0f, 0x9209, 'ST', 1],
+  [0xfe0f, 0x920a, 'ST', 1],
+  [0xfe0f, 0x9201, 'ST', 1],
+  [0xfe0f, 0x9202, 'ST', 1],
+  [0xd208, 0x8008, 'LDD', 1], // LD Y / LDD Y+q
+  [0xd208, 0x8000, 'LDD', 1], // LD Z / LDD Z+q
+  [0xd208, 0x8208, 'STD', 1],
+  [0xd208, 0x8200, 'STD', 1],
+  [0xff88, 0x0308, 'FMUL', 1],
+  [0xff88, 0x0380, 'FMULS', 1],
+  [0xff88, 0x0388, 'FMULSU', 1],
+  [0xff88, 0x0300, 'MULSU', 1],
+  [0xff00, 0x0200, 'MULS', 1],
+  [0xff00, 0x0100, 'MOVW', 1],
+  [0xff00, 0x9600, 'ADIW', 1],
+  [0xff00, 0x9700, 'SBIW', 1],
+  [0xff00, 0x9800, 'CBI', 1],
+  [0xff00, 0x9a00, 'SBI', 1],
+  [0xff00, 0x9900, 'SBIC', 1],
+  [0xff00, 0x9b00, 'SBIS', 1],
+  [0xfe08, 0xf800, 'BLD', 1],
+  [0xfe08, 0xfa00, 'BST', 1],
+  [0xfe08, 0xfc00, 'SBRC', 1],
+  [0xfe08, 0xfe00, 'SBRS', 1],
+  [0xfc00, 0xf400, 'BRBC', 1],
+  [0xfc00, 0xf000, 'BRBS', 1],
+  [0xfc00, 0x0c00, 'ADD', 1],
+  [0xfc00, 0x1c00, 'ADC', 1],
+  [0xfc00, 0x2000, 'AND', 1],
+  [0xfc00, 0x1400, 'CP', 1],
+  [0xfc00, 0x0400, 'CPC', 1],
+  [0xfc00, 0x1000, 'CPSE', 1],
+  [0xfc00, 0x2400, 'EOR', 1],
+  [0xfc00, 0x2c00, 'MOV', 1],
+  [0xfc00, 0x9c00, 'MUL', 1],
+  [0xfc00, 0x2800, 'OR', 1],
+  [0xfc00, 0x0800, 'SBC', 1],
+  [0xfc00, 0x1800, 'SUB', 1],
+  [0xf800, 0xb000, 'IN', 1],
+  [0xf800, 0xb800, 'OUT', 1],
+  [0xf000, 0x7000, 'ANDI', 1],
+  [0xf000, 0x3000, 'CPI', 1],
+  [0xf000, 0xe000, 'LDI', 1],
+  [0xf000, 0x6000, 'ORI', 1],
+  [0xf000, 0xd000, 'RCALL', 1],
+  [0xf000, 0xc000, 'RJMP', 1],
+  [0xf000, 0x4000, 'SBCI', 1],
+  [0xf000, 0x5000, 'SUBI', 1],
+];
+
+// 64K lookup, built once: index into TABLE + 1, 0 = invalid. Keeps the hot step loop O(1).
+const LOOKUP = new Uint8Array(0x10000);
+for (let op = 0; op < 0x10000; op++) {
+  const i = TABLE.findIndex(([mask, match]) => (op & mask) === match);
+  LOOKUP[op] = i + 1;
+}
+const INFOS: OpInfo[] = TABLE.map(([, , name, words]) => ({ name, words }));
+
+export function decode(opcode: number): OpInfo | undefined {
+  const i = LOOKUP[opcode & 0xffff];
+  return i ? INFOS[i - 1] : undefined;
+}
