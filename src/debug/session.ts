@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { AvrSim } from '../sim/avr';
 import { Board, DEFAULT_BOARD } from '../board';
 import type { BoardConfig } from '../board/types';
-import { assemble, DEFAULT_AVRA, DEFAULT_INCLUDE } from '../toolchain/avra';
+import { assemble, AVRA_BUILTIN_INC, DEFAULT_AVRA, defaultIncludeDirs } from '../toolchain/avra';
 import { ObjSourceMap } from '../toolchain/obj';
 import { AsmSymbols } from '../toolchain/symbols';
 import type { Diagnostic } from '../toolchain/types';
@@ -36,8 +36,6 @@ export type AvrEvent =
 const THREAD = 1;
 const enum Ref { Registers = 1, Status, Time }
 const FLAGS = ['C', 'Z', 'N', 'V', 'S', 'H', 'T', 'I'];
-// avra's built-in include dir; `.include "m2560def.inc"` resolves there first.
-const AVRA_BUILTIN_INC = '/opt/homebrew/Cellar/avra/1.4.2/include/avr';
 
 export class AvrDebugSession extends LoggingDebugSession {
   private engine?: Engine;
@@ -91,8 +89,9 @@ export class AvrDebugSession extends LoggingDebugSession {
     const args = this.args!;
     const program = path.resolve(args.program);
     if (!existsSync(program)) return `Program not found: ${program}`;
-    const includeDirs = args.includeDirs ?? [DEFAULT_INCLUDE];
-    const r = await assemble(program, { avra: args.avra ?? DEFAULT_AVRA, includeDirs });
+    const avra = args.avra ?? DEFAULT_AVRA;
+    const includeDirs = args.includeDirs ?? defaultIncludeDirs(avra);
+    const r = await assemble(program, { avra, includeDirs });
     this.custom({ event: 'avr/diagnostics', body: { program, diagnostics: r.diagnostics } });
     if (!r.ok) {
       this.sendEvent(new OutputEvent(`${r.output}\n`, 'stderr'));
@@ -103,7 +102,7 @@ export class AvrDebugSession extends LoggingDebugSession {
     const eep = existsSync(r.eepPath!) ? readFileSync(r.eepPath!, 'utf8') : undefined;
     sim.load(readFileSync(r.hexPath!, 'utf8'), eep);
     const map = new ObjSourceMap(r.objPath!, path.dirname(program));
-    const syms = new AsmSymbols(program, readFileSync(r.mapPath, 'utf8'), [...includeDirs, AVRA_BUILTIN_INC]);
+    const syms = new AsmSymbols(program, readFileSync(r.mapPath, 'utf8'), [...includeDirs, ...AVRA_BUILTIN_INC]);
     const old = this.engine;
     this.engine = new Engine(sim, map, syms);
     if (old) { this.engine.realtime = old.realtime; }

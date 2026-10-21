@@ -1,9 +1,35 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import type { BuildResult, Diagnostic } from './types';
 
-export const DEFAULT_AVRA = '/opt/homebrew/bin/avra';
-export const DEFAULT_INCLUDE = '/opt/homebrew/share/avra';
+const MAC = process.platform === 'darwin';
+
+/** Homebrew's avra on macOS, else whatever `avra` is on PATH. */
+export const DEFAULT_AVRA = MAC ? '/opt/homebrew/bin/avra' : 'avra';
+/** avra's compiled-in include dir; `.include "m2560def.inc"` resolves there first. */
+export const AVRA_BUILTIN_INC: string[] = MAC ? ['/opt/homebrew/Cellar/avra/1.4.2/include/avr'] : [];
+
+/**
+ * Where m2560def.inc is for this avra: homebrew's share dir on macOS, else `includes/` of a
+ * source build (avra at `<repo>/src/avra.exe`).
+ */
+export function defaultIncludeDirs(avra = DEFAULT_AVRA): string[] {
+  if (MAC) return ['/opt/homebrew/share/avra'];
+  const exe = path.isAbsolute(avra) ? avra : which(avra);
+  return exe ? [path.resolve(path.dirname(exe), '..', 'includes')] : [];
+}
+
+function which(cmd: string): string | undefined {
+  const exts = process.platform === 'win32' ? ['.exe', ''] : [''];
+  for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
+    for (const ext of exts) {
+      const f = path.join(dir, cmd + ext);
+      if (dir && existsSync(f)) return f;
+    }
+  }
+  return undefined;
+}
 
 // "task2.asm(37) : Error   : Unknown mnemonic/macro: foo"
 const DIAG = /^(.+?)\((\d+)\)\s*:\s*(Error|Warning)\s*:\s*(.*)$/i;
@@ -25,7 +51,7 @@ export function assemble(asmPath: string, opts: { avra?: string; includeDirs?: s
   const dir = path.dirname(asmPath);
   const base = path.basename(asmPath, path.extname(asmPath));
   const p = (ext: string) => path.join(dir, base + ext);
-  const args = [...(opts.includeDirs ?? [DEFAULT_INCLUDE]).flatMap((d) => ['-I', d]),
+  const args = [...(opts.includeDirs ?? defaultIncludeDirs(opts.avra)).flatMap((d) => ['-I', d]),
     '-fI', path.basename(asmPath), '-o', p('.hex'), '-e', p('.eep.hex'), '-d', p('.obj'), '-m', p('.map')];
   return new Promise((resolve) => {
     execFile(opts.avra ?? DEFAULT_AVRA, args, { cwd: dir }, (err, stdout, stderr) => {

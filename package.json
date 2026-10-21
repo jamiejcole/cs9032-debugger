@@ -2,7 +2,7 @@
   "name": "avr-asm-debugger",
   "displayName": "AVR Assembly Debugger (ATmega2560)",
   "description": "Simulator and debugger for avra assembly on the ATmega2560",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "jamiecole",
   "private": true,
   "license": "MIT",
@@ -178,15 +178,18 @@
       "properties": {
         "avr.avraPath": {
           "type": "string",
-          "default": "/opt/homebrew/bin/avra"
+          "default": "",
+          "description": "Path to avra. Empty: /opt/homebrew/bin/avra on macOS, else avra on PATH."
         },
         "avr.avrdudePath": {
           "type": "string",
-          "default": "/opt/homebrew/bin/avrdude"
+          "default": "",
+          "description": "Path to avrdude. Empty: /opt/homebrew/bin/avrdude on macOS, else avrdude on PATH."
         },
         "avr.includeDir": {
           "type": "string",
-          "default": "/opt/homebrew/share/avra"
+          "default": "",
+          "description": "Directory with m2560def.inc. Empty: /opt/homebrew/share/avra on macOS, else the includes folder of avra's source build."
         },
         "avr.realtime": {
           "type": "boolean",

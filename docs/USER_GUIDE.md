@@ -3,10 +3,19 @@
 ## Install
 ```sh
 npm install && npm run package
-code --install-extension avr-asm-debugger-0.0.1.vsix
+code --install-extension avr-asm-debugger-0.0.2.vsix
 ```
-Needs avra (`/opt/homebrew/bin/avra`) and, for flashing, avrdude. The paths are settings
-(`avr.avraPath`, `avr.avrdudePath`, `avr.includeDir`).
+Needs avra and, for flashing, avrdude. The paths are settings
+(`avr.avraPath`, `avr.avrdudePath`, `avr.includeDir`). Left empty, they default to homebrew
+(`/opt/homebrew/...`) on macOS and to `avra`/`avrdude` on PATH elsewhere.
+
+On Windows there's no avra package, so build it with MinGW (`scoop install mingw`):
+```powershell
+git clone --branch 1.4.2 https://github.com/Ro5bert/avra C:\tools\avra
+cd C:\tools\avra; mingw32-make
+```
+Then set `avr.avraPath` to `C:\tools\avra\src\avra.exe` (or put `C:\tools\avra\src` on PATH).
+The include dir is found from there (`C:\tools\avra\includes`).
 
 ## Debugging
 - Open `labN.asm` and press **F5**. No `launch.json` is needed: the open `.asm` file is
@@ -78,5 +87,5 @@ See `docs/BOARD.md`. Put `.vscode/avr-board.json` in the lab folder.
 ## Flash to board
 **AVR: Flash to Board** (also the editor title bar on `.asm` files) saves, assembles, then
 runs `avrdude -c wiring -p m2560 -P <port> -b 115200 -D -U flash:w:<hex>:i`. The port is
-found from `/dev/cu.usbmodem*` and `/dev/cu.usbserial*`. If there are several, you pick one,
+found from `/dev/cu.usbmodem*` and `/dev/cu.usbserial*` (on Windows, the `COM` ports). If there are several, you pick one,
 and it's remembered for the workspace. avrdude output goes to the **AVR** output channel.

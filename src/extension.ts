@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { AvrDebugSession } from './debug/session';
 import { flash, listSerialPorts, DEFAULT_AVRDUDE } from './toolchain/avrdude';
-import { assemble, DEFAULT_AVRA, DEFAULT_INCLUDE } from './toolchain/avra';
+import { assemble, DEFAULT_AVRA, defaultIncludeDirs } from './toolchain/avra';
 import type { Diagnostic } from './toolchain/types';
 import { Panel } from './ui/panel';
 
@@ -49,7 +49,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
         }
         const cfg = vscode.workspace.getConfiguration('avr');
         config.avra ??= cfg.get('avraPath') || DEFAULT_AVRA;
-        config.includeDirs ??= [cfg.get<string>('includeDir') || DEFAULT_INCLUDE];
+        config.includeDirs ??= includeDirs(cfg, config.avra);
         config.realtime ??= cfg.get('realtime', true);
         config.board = { ...readBoardFile(folder), ...config.board };
         return config;
@@ -81,7 +81,8 @@ export function activate(ctx: vscode.ExtensionContext): void {
       if (!asm?.endsWith('.asm')) return vscode.window.showErrorMessage('Open the .asm file to flash.');
       await vscode.window.activeTextEditor!.document.save();
       const cfg = vscode.workspace.getConfiguration('avr');
-      const r = await assemble(asm, { avra: cfg.get('avraPath') || DEFAULT_AVRA, includeDirs: [cfg.get<string>('includeDir') || DEFAULT_INCLUDE] });
+      const avra = cfg.get<string>('avraPath') || DEFAULT_AVRA;
+      const r = await assemble(asm, { avra, includeDirs: includeDirs(cfg, avra) });
       showDiagnostics(asm, r.diagnostics);
       if (!r.ok) return vscode.window.showErrorMessage('Assembly failed, see Problems.');
       const port = await pickPort(ctx);
@@ -101,10 +102,16 @@ async function pickPort(ctx: vscode.ExtensionContext): Promise<string | undefine
   const ports = listSerialPorts();
   const remembered = ctx.workspaceState.get<string>('avr.port');
   if (remembered && ports.includes(remembered)) return remembered;
-  if (ports.length === 0) { vscode.window.showErrorMessage('No board found (/dev/cu.usbmodem* or /dev/cu.usbserial*).'); return; }
+  if (ports.length === 0) { vscode.window.showErrorMessage('No board found (no serial ports).'); return; }
   const port = ports.length === 1 ? ports[0] : await vscode.window.showQuickPick(ports, { placeHolder: 'Serial port of the board' });
   if (port) await ctx.workspaceState.update('avr.port', port);
   return port;
+}
+
+/** The avr.includeDir setting, else the include dir that goes with this avra. */
+function includeDirs(cfg: vscode.WorkspaceConfiguration, avra: string): string[] {
+  const dir = cfg.get<string>('includeDir');
+  return dir ? [dir] : defaultIncludeDirs(avra);
 }
 
 function readBoardFile(folder: vscode.WorkspaceFolder | undefined): object {

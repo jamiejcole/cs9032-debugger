@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { ObjSourceMap, parseObj } from '../../src/toolchain/obj';
 import { AsmSymbols } from '../../src/toolchain/symbols';
-import { parseAvraOutput } from '../../src/toolchain/avra';
+import { AVRA_BUILTIN_INC, defaultIncludeDirs, parseAvraOutput } from '../../src/toolchain/avra';
 
 const ref = path.resolve('reference/lab2/task');
 const fx = path.resolve('test/fixtures/lab2');
 const asm = path.join(ref, 'task2.asm');
-const INC = ['/opt/homebrew/share/avra', '/opt/homebrew/Cellar/avra/1.4.2/include/avr'];
+const INC = [...defaultIncludeDirs(), ...AVRA_BUILTIN_INC];
 
 describe('avra .obj source map (reference/lab2/task/task2.obj)', () => {
   const sm = new ObjSourceMap(path.join(ref, 'task2.obj'));
@@ -68,6 +68,6 @@ describe('avra .obj source map (reference/lab2/task/task2.obj)', () => {
 
   it('parses avra diagnostics', () => {
     const d = parseAvraOutput('bad.asm(3) : Error   : Unknown mnemonic/macro: bogus\nWarning : No .DEVICE\n', '/w');
-    expect(d).toEqual([{ file: '/w/bad.asm', line: 3, severity: 'error', message: 'Unknown mnemonic/macro: bogus' }]);
+    expect(d).toEqual([{ file: path.resolve('/w/bad.asm'), line: 3, severity: 'error', message: 'Unknown mnemonic/macro: bogus' }]);
   });
 });

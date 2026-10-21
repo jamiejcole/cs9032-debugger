@@ -1,11 +1,20 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 
-export const DEFAULT_AVRDUDE = '/opt/homebrew/bin/avrdude';
+export const DEFAULT_AVRDUDE = process.platform === 'darwin' ? '/opt/homebrew/bin/avrdude' : 'avrdude';
 
 export function listSerialPorts(dev = '/dev'): string[] {
+  if (process.platform === 'win32') return listComPorts();
   try {
     return readdirSync(dev).filter((n) => /^cu\.(usbmodem|usbserial)/.test(n)).map((n) => `${dev}/${n}`);
+  } catch { return []; }
+}
+
+/** COM ports from the registry, e.g. `\Device\USBSER000    REG_SZ    COM3`. */
+function listComPorts(): string[] {
+  try {
+    const out = execFileSync('reg', ['query', 'HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM'], { encoding: 'utf8' });
+    return [...out.matchAll(/REG_SZ\s+(COM\d+)/g)].map((m) => m[1]);
   } catch { return []; }
 }
 
