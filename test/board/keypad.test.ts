@@ -5,6 +5,7 @@ import type { DriveLevel, PinBus, PinLevel, PinName, PinState } from '../../src/
 import { DEFAULT_BOARD } from '../../src/board';
 
 class FakeBus implements PinBus {
+  readonly pins: PinName[] = [];
   private st = new Map<PinName, PinState>();
   private subs = new Map<PinName, Set<(s: PinState) => void>>();
   state(p: PinName): PinState {
@@ -28,7 +29,7 @@ class FakeBus implements PinBus {
 function scan(key: string): { row: number; col: number } | null {
   const bus = new FakeBus();
   const kp = new Keypad();
-  kp.attach(bus, DEFAULT_BOARD, { cycles: () => 0, hz: 16_000_000 });
+  kp.attach(bus, DEFAULT_BOARD);
   kp.input({ kind: 'key', key });
   for (let r = 0; r < 4; r++) {
     for (let k = 0; k < 4; k++) bus.out(`PL${4 + k}`, k === r ? 0 : 1);
@@ -49,7 +50,7 @@ describe('Keypad', () => {
   it('reads nothing when no key is held', () => {
     const bus = new FakeBus();
     const kp = new Keypad();
-    kp.attach(bus, DEFAULT_BOARD, { cycles: () => 0, hz: 16_000_000 });
+    kp.attach(bus, DEFAULT_BOARD);
     bus.out('PL4', 0);
     for (let c = 0; c < 4; c++) expect(bus.state(`PL${c}`).level).toBe('z');
   });
