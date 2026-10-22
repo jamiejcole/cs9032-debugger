@@ -27,7 +27,7 @@ unclear about the buttons. The student supplied this corrected table:
 |---|---|---|
 | LCD D0–D7 | PF0–PF7 | `lcd.data: "PORTF"` |
 | LCD RS / E / RW / BE | PA7 / PA6 / PA5 / PA4 | `lcd.rs`, `lcd.e`, `lcd.rw` |
-| LCD backlight (BL) | PE5 | (not simulated yet) |
+| LCD backlight (BL) | PE3 | `lcd.bl` |
 | LED bar LED0, LED1 | PG0, PG1 | |
 | LED bar LED2–LED9 | PC0–PC7 | |
 | PB0 / PB1 | PD0 ("RDX4") / PD1 ("RDX3") | `buttons` |
@@ -38,7 +38,7 @@ unclear about the buttons. The student supplied this corrected table:
 | Motor LED | PA3 | — |
 | Motor OpE | +5 V | — |
 | POT / LDR | PK8 / PK9 (ADC8 / ADC9) | `pot.adcChannel: 8` |
-| Audio Ain / ASD / MiO (unused) | PE3 / PG1 / PK10 | — |
+| Audio Ain / ASD / MiO (unused) | older table: PE3 / PG1 / PK10 (PE3 is the LCD backlight per the newer table) | — |
 
 The LED bar pins are the same set the lab 2 default uses. `ledBar` lists them from the
 **bottom** LED up. The default puts PC0 at the bottom and PG1 at the top, which matches
@@ -50,10 +50,25 @@ Full config for the board:
 {
   "ledBar": ["PC0","PC1","PC2","PC3","PC4","PC5","PC6","PC7","PG0","PG1"],
   "buttons": { "PB0": "PD0", "PB1": "PD1" },
-  "lcd": { "data": "PORTF", "rs": "PA7", "rw": "PA5", "e": "PA6" },
+  "lcd": { "data": "PORTF", "rs": "PA7", "rw": "PA5", "e": "PA6", "bl": "PE3" },
   "keypad": { "rows": ["PL7","PL6","PL5","PL4"], "cols": ["PL3","PL2","PL1","PL0"] }
 }
 ```
+
+## LCD and keypad simulation
+
+Both are on by default (the wiring above) and shown as collapsible cards next to the LED bar.
+
+- **LCD** follows `LCD_Manual.pdf`:
+  - Busy flag with the manual's execution times: 40 µs per instruction or data access, and 1.64 ms for Clear/Home. Table 3.1 says 15.2 ms, which looks like a typo for 1.52 ms at 270 kHz.
+  - Power-on reset: the module is busy for the first ~11.8 ms.
+  - Instructions and data written while busy are **dropped**, with a warning on the card.
+  - Address counter and data register read-back, including the stale-read behaviour.
+  - DD RAM layout 00-27 and 40-67, with no RAM at 28-3F, so line 1 does not flow into line 2.
+  - Display and cursor shift, CG RAM characters, 4-bit mode, and 1-line vs 2-line.
+  - Datasheet timing (E pulse width, setup times) is checked and shown as an advisory warning. It does not change behaviour.
+  - Not modelled: BE (PA4), the 5x10 font, the tDDR data delay, and blink in simulated rather than wall-clock time.
+- **Keypad** is a 4x4 matrix. Click a key to hold it, click again to release. A pressed key pulls its column low only while its row is driven low, so a program has to scan like it does on the real board.
 
 ## Open questions (also in docs/QUESTIONS.md)
 1. Which Port D pin is the "TDX2" header label (motor sensor OpO)?

@@ -173,6 +173,7 @@ export class AvrDebugSession extends LoggingDebugSession {
     const err = await this.build(); // re-assemble so edits take effect
     if (err) return this.sendErrorResponse(res, 1, err);
     this.engine!.reset();
+    this.board?.reset();
     this.sendResponse(res);
     this.stopped({ reason: 'entry' });
   }

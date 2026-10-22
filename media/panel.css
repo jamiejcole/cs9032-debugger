@@ -40,3 +40,32 @@ table.regs td.val { padding-right: 8px; opacity: 0.8; }
 .bit.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 .bit.driven { outline: 2px solid var(--vscode-charts-orange, orange); outline-offset: -2px; }
 :focus-visible { outline: 2px solid var(--vscode-focusBorder); }
+
+/* LCD: 16x2 character module (manual §1.2, 5x8 dots). */
+.lcd {
+  --lcd-bg: #9bbf3a; --lcd-ink: #17240a;
+  display: inline-block; padding: 8px; border-radius: 4px; background: var(--lcd-bg); color: var(--lcd-ink);
+  border: 2px solid #0006; font-family: var(--vscode-editor-font-family), monospace; user-select: none;
+}
+.lcd.nobl { --lcd-bg: #46521f; --lcd-ink: #0a1004; }
+.lcd.off .cell { color: transparent; }
+.lcdrow { display: flex; gap: 2px; margin: 2px 0; }
+.cell {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 26px; font-size: 18px; line-height: 1; background: #0001; border-radius: 1px;
+}
+.cell.under::after { content: ; position: absolute; left: 1px; right: 1px; bottom: 1px; height: 3px; background: var(--lcd-ink); }
+.cell.blinkcur { }
+body:not(.blink-off) .cell.blinkcur { background: var(--lcd-ink); color: var(--lcd-bg); }
+body:not(.blink-off) .cell.blinkcur .glyph { fill: var(--lcd-bg); }
+.glyph { width: 11px; height: 17px; fill: var(--lcd-ink); }
+.lcdwarn { margin: 6px 0 0; padding-left: 16px; max-width: 330px; font-size: 0.85em; color: var(--vscode-editorWarning-foreground, #cca700); }
+/* Keypad */
+.keypad { display: grid; grid-template-columns: repeat(4, 40px); gap: 4px; }
+.key {
+  height: 34px; border-radius: 4px; cursor: pointer; font-weight: 600; font-family: inherit;
+  background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+.key.down { background: var(--vscode-button-background); color: var(--vscode-button-foreground); transform: translateY(1px); }
+.hint { margin-top: 6px; font-size: 0.85em; opacity: 0.7; }
