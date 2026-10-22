@@ -70,6 +70,7 @@ Both are on by default (the wiring above) and shown as collapsible cards next to
   - E pulse width and the other §4.2.3 timings are not checked: the module does not complain about them.
   - Not modelled: BE (PA4), the 5x10 font, the tDDR data delay, and blink in simulated rather than wall-clock time.
 - **Keypad** is a 4x4 matrix. Click a key to hold it, click again to release. A pressed key pulls its column low only while its row is driven low, so a program has to scan like it does on the real board.
+  The matrix is wired transposed from the face layout (checked on the board): the key at face row i, column j joins `rows[3-j]` to `cols[3-i]`. Scanning PL4-PL7 as rows and PL0-PL3 as columns, the lookup table index `row*4+col` therefore needs `1 4 7 * / 2 5 8 0 / 3 6 9 # / A B C D`.
 
 ## Open questions (also in docs/QUESTIONS.md)
 1. Which Port D pin is the "TDX2" header label (motor sensor OpO)?
