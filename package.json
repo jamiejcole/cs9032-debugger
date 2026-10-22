@@ -2,7 +2,7 @@
   "name": "avr-asm-debugger",
   "displayName": "AVR Assembly Debugger (ATmega2560)",
   "description": "Simulator and debugger for avra assembly on the ATmega2560",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "jamiecole",
   "private": true,
   "license": "MIT",
