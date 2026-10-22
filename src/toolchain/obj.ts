@@ -3,6 +3,12 @@ import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import type { SourceLoc, SourceMap } from './types';
 
+/** Resolved path as a lookup key. Windows paths are case-insensitive (VS Code sends `c:\`, avra paths may be `C:\`). */
+export const pathKey = (f: string): string => {
+  const r = path.resolve(f);
+  return process.platform === 'win32' ? r.toLowerCase() : r;
+};
+
 export interface ObjRecord { addr: number; opcode: number; file: number; line: number; macro: boolean }
 
 export function parseObj(buf: Uint8Array): { records: ObjRecord[]; files: string[] } {
@@ -54,7 +60,7 @@ export class ObjSourceMap implements SourceMap {
       const code = !DATA_LINE.test(srcLine(r.file, r.line));
       this.byAddr.set(r.addr, { ...r, code });
       if (!code) continue;
-      const key = `${this.files[r.file]}:${r.line}`;
+      const key = `${pathKey(this.files[r.file])}:${r.line}`;
       const list = this.byLoc.get(key) ?? [];
       list.push(r.addr);
       this.byLoc.set(key, list);
@@ -66,13 +72,13 @@ export class ObjSourceMap implements SourceMap {
     return r && { file: this.files[r.file], line: r.line };
   }
   locToAddrs(file: string, line: number): number[] {
-    return this.byLoc.get(`${path.resolve(file)}:${line}`) ?? [];
+    return this.byLoc.get(`${pathKey(file)}:${line}`) ?? [];
   }
   isCode(wordAddr: number): boolean { return this.byAddr.get(wordAddr)?.code ?? false; }
   isMacro(wordAddr: number): boolean { return this.byAddr.get(wordAddr)?.macro ?? false; }
   /** All lines that have code, for breakpoint validation. */
   codeLines(file: string): number[] {
-    const prefix = `${path.resolve(file)}:`;
+    const prefix = `${pathKey(file)}:`;
     return [...this.byLoc.keys()].filter((k) => k.startsWith(prefix)).map((k) => +k.slice(prefix.length));
   }
 }

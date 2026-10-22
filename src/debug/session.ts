@@ -11,7 +11,7 @@ import { AvrSim } from '../sim/avr';
 import { Board, DEFAULT_BOARD } from '../board';
 import type { BoardConfig } from '../board/types';
 import { assemble, AVRA_BUILTIN_INC, DEFAULT_AVRA, defaultIncludeDirs } from '../toolchain/avra';
-import { ObjSourceMap } from '../toolchain/obj';
+import { ObjSourceMap, pathKey } from '../toolchain/obj';
 import { AsmSymbols } from '../toolchain/symbols';
 import type { Diagnostic } from '../toolchain/types';
 import type { FromWebview, ToWebview } from '../ui/protocol';
@@ -205,7 +205,7 @@ export class AvrDebugSession extends LoggingDebugSession {
     const e = this.engine;
     if (!e) return bps.map((b) => ({ verified: false, line: b.line }));
     // Drop old addresses for this file, then add the new ones.
-    for (const a of [...e.breakpoints]) if (e.map.addrToLoc(a)?.file === file) e.breakpoints.delete(a);
+    for (const a of [...e.breakpoints]) if (pathKey(e.map.addrToLoc(a)?.file ?? '') === pathKey(file)) e.breakpoints.delete(a);
     const lines = e.map.codeLines(file).sort((a, b) => a - b);
     return bps.map((b) => {
       const line = lines.find((l) => l >= b.line);
