@@ -59,7 +59,6 @@ table.regs td.val { padding-right: 8px; opacity: 0.8; }
 body:not(.blink-off) .cell.blinkcur { background: var(--lcd-ink); color: var(--lcd-bg); }
 body:not(.blink-off) .cell.blinkcur .glyph { fill: var(--lcd-bg); }
 .glyph { width: 11px; height: 17px; fill: var(--lcd-ink); }
-.lcdwarn { margin: 6px 0 0; padding-left: 16px; max-width: 330px; font-size: 0.85em; color: var(--vscode-editorWarning-foreground, #cca700); }
 /* Keypad */
 .keypad { display: grid; grid-template-columns: repeat(4, 40px); gap: 4px; }
 .key {

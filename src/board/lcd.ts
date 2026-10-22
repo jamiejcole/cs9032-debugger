@@ -13,12 +13,13 @@ const INSTRUCTION_US = 40;
 /** §2.2.1: the internal reset makes the busy flag active 10 ms after Vcc rises, until the reset
  *  sequence (clear + function set + display off + entry mode) has finished executing. */
 const POWER_ON_US = 10_000 + CLEAR_HOME_US + 3 * INSTRUCTION_US;
-/** §4.2.3 write/read timing, ns. Advisory only: real chips tolerate more than the table promises. */
-const T_CYCLE = 1000, PW_EH = 450, T_AS = 140, T_DSW = 195;
 
 const DISPLAY_COLS = 16;
 const DDRAM_BYTES = 80; // §1.7.4
 const CGRAM_BYTES = 64; // §1.7.8
+/** CG RAM is plain RAM that the reset sequence never clears (§2.2.1), so it holds junk at power-on.
+ *  On the lab board every row of character 4 (code 0x04/0x0C) reads 0b01010: two vertical bars. */
+const CGRAM_POWER_ON = 0x0a;
 
 /** Standard (A00) character ROM as unicode, for the codes the manual's Table 5.3 shows. */
 const ROM_E0 = ["α", "ä", "β", "ε", "μ", "σ", "ρ", "g", "√", "⁻", "j", "ˣ", "¢", "£", "ñ", "ö",
@@ -66,11 +67,6 @@ export class Lcd implements BoardPeripheral {
   private phase: 0 | 1 = 0; // 4-bit mode: which nibble is next
   private highNibble = 0;
   private readByte = 0;
-  private lastLevel = new Map<PinName, PinLevel | 'z'>();
-  private ctlChangedAt = -Infinity;
-  private dataChangedAt = -Infinity;
-  private eRoseAt = -Infinity;
-  private warnings = new Map<string, number>();
 
   attach(bus: PinBus, config: BoardConfig, clock: { cycles(): number; hz: number }): void {
     const c = config.lcd;
@@ -80,19 +76,14 @@ export class Lcd implements BoardPeripheral {
     const port = /^PORT([A-L])$/i.exec(c.data)?.[1]?.toUpperCase();
     this.data = port ? Array.from({ length: 8 }, (_, i) => `P${port}${i}`) : [];
     ({ rs: this.rs, rw: this.rw, e: this.e, bl: this.bl } = c);
-    const watch = (pin: PinName | undefined, onChange: (level: PinLevel | 'z') => void) => {
-      if (!pin) return;
-      this.lastLevel.set(pin, bus.state(pin).level);
-      this.unsubs.push(bus.subscribe(pin, (s) => {
-        if (this.lastLevel.get(pin) === s.level) return;
-        this.lastLevel.set(pin, s.level);
-        onChange(s.level);
+    if (this.e) {
+      let last = bus.state(this.e).level;
+      this.unsubs.push(bus.subscribe(this.e, (s) => {
+        if (s.level === last) return;
+        last = s.level;
+        this.onE(s.level === 1);
       }));
-    };
-    watch(this.rs, () => (this.ctlChangedAt = this.now()));
-    watch(this.rw, () => (this.ctlChangedAt = this.now()));
-    for (const p of this.data) watch(p, () => (this.dataChangedAt = this.now()));
-    watch(this.e, (l) => this.onE(l === 1));
+    }
     this.reset();
   }
 
@@ -106,23 +97,19 @@ export class Lcd implements BoardPeripheral {
   /** Power-on reset (§2.2.1). Call when the simulated MCU is reset. */
   reset(): void {
     this.ddram.fill(0x20);
-    this.cgram.fill(0);
+    this.cgram.fill(CGRAM_POWER_ON);
     this.ac = 0; this.inCgram = false; this.dr = 0; this.shift = 0;
     this.increment = true; this.shiftOnWrite = false;
     this.displayOn = this.cursorOn = this.blinkOn = false;
     this.eightBit = true; this.twoLines = false;
     this.phase = 0; this.eHigh = false; this.reading = false; this.driving = false;
-    this.eRoseAt = this.ctlChangedAt = this.dataChangedAt = -Infinity;
-    this.warnings.clear();
     this.busyUntil = this.now() + this.cycles(POWER_ON_US * 1000);
   }
 
   // ---- bus ----------------------------------------------------------------------------------
   private now(): number { return this.clock.cycles(); }
   private cycles(ns: number): number { return (ns * this.clock.hz) / 1e9; }
-  private ns(cycles: number): number { return (cycles * 1e9) / this.clock.hz; }
   private busy(): boolean { return this.now() < this.busyUntil; }
-  private warn(msg: string): void { this.warnings.set(msg, (this.warnings.get(msg) ?? 0) + 1); }
 
   private level(pin?: PinName): number { return pin && this.bus?.state(pin).level === 1 ? 1 : 0; }
   private readPins(): number {
@@ -132,15 +119,10 @@ export class Lcd implements BoardPeripheral {
   private onE(high: boolean): void {
     if (high === this.eHigh) return;
     this.eHigh = high;
-    const now = this.now();
     if (high) {
-      if (now - this.eRoseAt < this.cycles(T_CYCLE)) this.warn(`E cycle time ${Math.round(this.ns(now - this.eRoseAt))} ns < ${T_CYCLE} ns (tcycle)`);
-      if (now - this.ctlChangedAt < this.cycles(T_AS)) this.warn(`RS/RW to E setup ${Math.round(this.ns(now - this.ctlChangedAt))} ns < ${T_AS} ns (tAS)`);
-      this.eRoseAt = now;
       this.reading = this.level(this.rw) === 1;
       if (this.reading) this.startRead();
     } else {
-      if (now - this.eRoseAt < this.cycles(PW_EH)) this.warn(`E pulse ${Math.round(this.ns(now - this.eRoseAt))} ns < ${PW_EH} ns (PWEH)`);
       if (this.driving) this.releaseData();
       if (this.reading) this.endRead();
       else this.endWrite();
@@ -159,7 +141,7 @@ export class Lcd implements BoardPeripheral {
     this.driving = true;
     this.data.forEach((p, i) => {
       if (!pins.includes(p)) return;
-      if (this.bus!.state(p).output) { this.warn(`MCU drives ${p} while the LCD is being read (bus contention)`); return; }
+      if (this.bus!.state(p).output) return; // the MCU is driving the bus too; we can't win
       if ((mask >> i) & 1) this.bus!.drive(p, ((out >> i) & 1) as PinLevel);
     });
   }
@@ -171,17 +153,13 @@ export class Lcd implements BoardPeripheral {
       if (this.phase === 1) return;
     }
     if (!isData) return;
-    if (this.busy()) { this.warn('LCD data read while busy: ignored'); return; }
+    if (this.busy()) return;
     this.step(this.increment ? 1 : -1); // display shift is not executed on a read (§3.1.11)
     this.prefetch();
     this.busyUntil = this.now() + this.cycles(INSTRUCTION_US * 1000);
   }
 
   private endWrite(): void {
-    const now = this.now();
-    if (now - this.dataChangedAt < this.cycles(T_DSW)) this.warn(`data to E-fall setup ${Math.round(this.ns(now - this.dataChangedAt))} ns < ${T_DSW} ns (tDSW)`);
-    const pins = this.eightBit ? this.data : this.data.slice(4);
-    if (pins.some((p) => this.bus?.state(p).level === 'z')) this.warn('LCD written with floating data lines');
     let byte = this.readPins();
     if (!this.eightBit) {
       if (this.phase === 0) { this.highNibble = byte & 0xf0; this.phase = 1; return; }
@@ -219,11 +197,7 @@ export class Lcd implements BoardPeripheral {
   }
 
   private execute(isData: boolean, v: number): void {
-    if (this.busy()) {
-      this.warn(isData ? `data write 0x${v.toString(16).toUpperCase().padStart(2, '0')} while busy: dropped`
-        : `instruction 0x${v.toString(16).toUpperCase().padStart(2, '0')} while busy: dropped`);
-      return;
-    }
+    if (this.busy()) return; // the module ignores anything written while BF=1
     let us = INSTRUCTION_US;
     if (isData) this.writeData(v);
     else {
@@ -291,7 +265,6 @@ export class Lcd implements BoardPeripheral {
       kind: 'lcd', id: this.id, lines, custom, cursor, on: this.displayOn,
       backlight: this.bl ? this.bus?.state(this.bl).level === 1 : true,
       busy: this.busy(),
-      warnings: [...this.warnings].slice(-6).map(([m, n]) => (n > 1 ? `${m} ×${n}` : m)),
     };
   }
 

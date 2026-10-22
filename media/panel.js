@@ -73,10 +73,7 @@
       }
       grid.append(r);
     }
-    const warn = p.warnings.length
-      ? el('ul', { class: 'lcdwarn', title: 'What the real module would do differently from what the program expects (see LCD_Manual.pdf)' }, ...p.warnings.map((w) => el('li', {}, w)))
-      : null;
-    return card(p.id, 'LCD' + (p.busy ? ' (busy)' : ''), grid, warn);
+    return card(p.id, 'LCD', grid);
   }
 
   function renderKeypad(p) {

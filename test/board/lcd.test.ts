@@ -73,7 +73,6 @@ describe('LCD power-on and busy flag', () => {
     r.wait(5_000);
     r.cmd(0x0f);
     expect(r.lcd.view().on).toBe(false);
-    expect(r.lcd.view().warnings.join()).toContain('while busy');
     r.wait(12_000);
     r.cmd(0x0f);
     expect(r.lcd.view().on).toBe(true);
@@ -103,7 +102,6 @@ describe('LCD power-on and busy flag', () => {
     r.put('HI');
     r.cmd(0x01, 1_000);
     r.cmd(0x06, 800); // dropped: still clearing
-    expect(r.lcd.view().warnings.join()).toContain('instruction 0x06 while busy');
     r.cmd(0x04, 100); // entry mode decrement, now accepted
     r.cmd(0x81);
     r.put('A');
@@ -258,6 +256,17 @@ describe('LCD reads (§3.1.11)', () => {
 });
 
 describe('LCD CG RAM (§1.7.8)', () => {
+  it('is not cleared at power-on: code 0x0C shows the two-bar junk character', () => {
+    const r = rig();
+    r.init();
+    r.write(1, 0x0c); // what lab3.asm sends before the first key
+    r.wait(50);
+    r.put('6');
+    const v = r.lcd.view();
+    expect(v.custom).toEqual([{ row: 0, col: 0, rows: Array(8).fill(0x0a) }]);
+    expect(v.lines[0].slice(0, 2)).toBe(' 6');
+  });
+
   it('stores 8 rows per character and shows codes 0-7 (and 8-15) as that pattern', () => {
     const r = rig();
     r.init();
@@ -320,25 +329,7 @@ describe('LCD 4-bit interface (§2.2.2.2)', () => {
   });
 });
 
-describe('LCD bus and timing warnings (§4.2.3)', () => {
-  it('flags an E pulse shorter than 450 ns', () => {
-    const r = rig();
-    r.init();
-    r.bus.out('PA7', 1); r.setData(0x41);
-    r.wait(1);
-    r.bus.out('PA6', 1); r.wait(0.25); r.bus.out('PA6', 0);
-    expect(r.lcd.view().warnings.join()).toMatch(/PWEH/);
-  });
-
-  it('flags the MCU driving the data bus during a read', () => {
-    const r = rig();
-    r.init();
-    r.bus.out('PA7', 0); r.bus.out('PA5', 1); r.wait(1);
-    r.bus.out('PA6', 1); // PF is still an output
-    r.wait(1); r.bus.out('PA6', 0);
-    expect(r.lcd.view().warnings.join()).toMatch(/contention/);
-  });
-
+describe('LCD bus', () => {
   it('releases the data lines when E falls', () => {
     const r = rig();
     r.init();

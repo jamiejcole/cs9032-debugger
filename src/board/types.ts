@@ -24,8 +24,6 @@ export interface LcdView {
   on: boolean;
   backlight: boolean;
   busy: boolean;
-  /** Things the program did that the real module would object to (dropped writes, timing). */
-  warnings: string[];
 }
 
 /** Snapshot of one peripheral for the UI. `kind` selects the renderer. */

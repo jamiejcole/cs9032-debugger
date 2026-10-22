@@ -62,11 +62,12 @@ Both are on by default (the wiring above) and shown as collapsible cards next to
 - **LCD** follows `LCD_Manual.pdf`:
   - Busy flag with the manual's execution times: 40 µs per instruction or data access, and 1.64 ms for Clear/Home. Table 3.1 says 15.2 ms, which looks like a typo for 1.52 ms at 270 kHz.
   - Power-on reset: the module is busy for the first ~11.8 ms.
-  - Instructions and data written while busy are **dropped**, with a warning on the card.
+  - Instructions and data written while busy are **dropped**, as on the real module.
   - Address counter and data register read-back, including the stale-read behaviour.
   - DD RAM layout 00-27 and 40-67, with no RAM at 28-3F, so line 1 does not flow into line 2.
   - Display and cursor shift, CG RAM characters, 4-bit mode, and 1-line vs 2-line.
-  - Datasheet timing (E pulse width, setup times) is checked and shown as an advisory warning. It does not change behaviour.
+  - CG RAM is not cleared at power-on (the reset sequence only clears DD RAM). On the lab board it powers up with every row of character 4 = `0b01010`, so code `0x04`/`0x0C` shows two vertical bars until the program writes CG RAM.
+  - E pulse width and the other §4.2.3 timings are not checked: the module does not complain about them.
   - Not modelled: BE (PA4), the 5x10 font, the tDDR data delay, and blink in simulated rather than wall-clock time.
 - **Keypad** is a 4x4 matrix. Click a key to hold it, click again to release. A pressed key pulls its column low only while its row is driven low, so a program has to scan like it does on the real board.
 
